@@ -1,15 +1,13 @@
 // 🔄 AUTO-UPDATED by codegen - collection imports added here
+// TanStack DB collections are imported and used directly via useLiveQuery
 
-import { createDbClient } from '@tanstack/db'
-import { queryClient } from './query-client'
+// Re-export hooks from react-db for convenience
+export { useLiveQuery, useLiveSuspenseQuery } from '@tanstack/react-db'
+export { createCollection, createTransaction } from '@tanstack/db'
 
-// Create the DB client with all collections registered
-export const db = createDbClient({
-  queryClient,
-  collections: {
-    // === COLLECTIONS ===
-  },
-})
+// Collections registry - codegen adds collection imports here
+export const collections = {
+  // === COLLECTIONS ===
+} as const
 
-// Type helper for accessing collections
-export type DbCollections = typeof db.collections
+export type DbCollections = typeof collections
