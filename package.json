@@ -1,0 +1,46 @@
+{
+  "name": "zeshark",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "generate": "tsx ./src/codegen/generate.ts",
+    "generate:all": "tsx ./src/codegen/generate-all.ts",
+    "setup-ui": "chmod +x ./scripts/setup-ui.sh && ./scripts/setup-ui.sh"
+  },
+  "dependencies": {
+    "@tanstack/db": "^0.5.17",
+    "@tanstack/react-db": "^0.5.17",
+    "@tanstack/react-form": "^1.0.0",
+    "@tanstack/react-query": "^5.62.0",
+    "@tanstack/react-router": "^1.146.0",
+    "@tanstack/react-table": "^8.20.0",
+    "@tanstack/react-virtual": "^3.11.0",
+    "axios": "^1.7.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sonner": "^1.7.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@tanstack/router-plugin": "^1.146.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.0",
+    "ts-morph": "^24.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}
