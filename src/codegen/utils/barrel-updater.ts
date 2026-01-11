@@ -112,16 +112,26 @@ export function updateRegistry(
   }
 
   // Add collection import
-  const collectionImportMarker = "from '@/collections"
-  if (!content.includes(`${pluralName}Collection`)) {
-    if (content.includes(collectionImportMarker)) {
-      const lastCollectionImport = newContent.lastIndexOf(collectionImportMarker)
-      const endOfLine = newContent.indexOf('\n', lastCollectionImport)
+  if (!newContent.includes(`${pluralName}Collection`)) {
+    // Find the last import statement and add after it
+    const importMatch = newContent.match(/^import .+ from .+$/gm)
+    if (importMatch) {
+      const lastImport = importMatch[importMatch.length - 1]
+      const lastImportIndex = newContent.lastIndexOf(lastImport)
+      const endOfLine = newContent.indexOf('\n', lastImportIndex)
       newContent =
         newContent.slice(0, endOfLine + 1) +
         collectionImportLine +
         '\n' +
         newContent.slice(endOfLine + 1)
+    } else {
+      // No imports found, add at top after the comment
+      const firstNewline = newContent.indexOf('\n')
+      newContent =
+        newContent.slice(0, firstNewline + 1) +
+        collectionImportLine +
+        '\n' +
+        newContent.slice(firstNewline + 1)
     }
   }
 
