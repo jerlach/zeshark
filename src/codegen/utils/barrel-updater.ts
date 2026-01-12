@@ -242,13 +242,17 @@ export function updateNavigation(
 
   // Add icon import if needed
   let newContent = content
-  const iconImportMatch = content.match(/import \{([^}]+)\} from 'lucide-react'/)
-  if (iconImportMatch && !iconImportMatch[1].includes(icon)) {
-    const existingIcons = iconImportMatch[1]
-    newContent = newContent.replace(
-      iconImportMatch[0],
-      `import {${existingIcons}, ${icon}} from 'lucide-react'`
-    )
+  if (!content.includes(`  ${icon},`) && !content.includes(`  ${icon}\n`)) {
+    // Find the closing brace of the lucide-react import and insert before it
+    const lucideImportEnd = content.indexOf("} from 'lucide-react'")
+    if (lucideImportEnd !== -1) {
+      // Find the last newline before the closing brace
+      const beforeBrace = content.lastIndexOf('\n', lucideImportEnd)
+      newContent =
+        content.slice(0, beforeBrace + 1) +
+        `  ${icon},\n` +
+        content.slice(beforeBrace + 1)
+    }
   }
 
   // Add nav item
