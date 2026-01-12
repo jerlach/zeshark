@@ -5,6 +5,7 @@ import {
   Settings,
   Package,
   type LucideIcon,
+  FileText,
 } from 'lucide-react'
 
 export type NavItem = {
@@ -37,6 +38,12 @@ export const mainNavigation: NavSection[] = [
     title: 'Resources',
     items: [
       // === RESOURCE NAV ITEMS ===
+    {
+      title: 'Orders',
+      href: '/orders',
+      icon: FileText,
+      description: 'Vehicle sales orders',
+    },
     ],
   },
   {

@@ -1,6 +1,8 @@
 // 🔄 AUTO-UPDATED by codegen - imports and entries added here
 
 import type { ResourceConfig } from '@/schemas/_resource.schema'
+import { orderResource } from '@/schemas/order.schema'
+import { ordersCollection } from '@/collections'
 
 // Resource registry entry type
 export type ResourceEntry = {
@@ -16,6 +18,15 @@ export type ResourceEntry = {
 // Resource registry - populated by codegen
 export const resourceRegistry: Record<string, ResourceEntry> = {
   // === REGISTRY ENTRIES ===
+  order: {
+    config: orderResource.config,
+    collection: ordersCollection,
+    routes: {
+      list: '/orders',
+      new: '/orders/new',
+      edit: (id: string) => `/orders/${id}`,
+    },
+  },
 }
 
 /**

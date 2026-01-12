@@ -10,9 +10,12 @@ export const apiClient = axios.create({
 
 // Request interceptor - add auth token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
+  // TODO: Replace with real auth - use env var for dev, localStorage for production
+  const token = import.meta.env.VITE_API_TOKEN ?? localStorage.getItem('auth_token')
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `${token}`
+    config.headers['tenant_id'] = "cleber"
+    config.headers['tenant'] = "cleber"
   }
   return config
 })

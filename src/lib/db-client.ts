@@ -1,3 +1,4 @@
+import { ordersCollection } from '@/collections'
 // 🔄 AUTO-UPDATED by codegen - collection imports added here
 // TanStack DB collections are imported and used directly via useLiveQuery
 
@@ -8,6 +9,7 @@ export { createCollection, createTransaction } from '@tanstack/db'
 // Collections registry - codegen adds collection imports here
 export const collections = {
   // === COLLECTIONS ===
+    orders: ordersCollection,
 } as const
 
 export type DbCollections = typeof collections

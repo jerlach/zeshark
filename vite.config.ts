@@ -18,4 +18,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: 'cleber.app.presa.localhost',
+    port: 5173,
+  },
 })

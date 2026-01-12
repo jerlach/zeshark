@@ -4,3 +4,4 @@
 export * from './_resource.schema'
 
 // === RESOURCE EXPORTS (auto-generated) ===
+export { orderResource } from './order.schema'
