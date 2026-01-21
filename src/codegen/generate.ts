@@ -11,6 +11,7 @@ import {
   updateNavigation,
 } from './utils/barrel-updater'
 import { generateCollection } from './templates/collection.template'
+import { generateCollectionParquet } from './templates/collection-parquet.template'
 import { generateRouteIndex } from './templates/route-index.template'
 import { generateRouteNew } from './templates/route-new.template'
 import { generateRouteEdit } from './templates/route-edit.template'
@@ -44,12 +45,15 @@ async function generateResource(
   const { config, resourceVarName } = resource
   console.log(`  ✓ Parsed ${resourceVarName} (${config.pluralName})`)
 
+  // Determine which collection template to use based on dataSource
+  const isParquet = config.dataSource === 'parquet'
+
   // Generate files
   const generators = [
     {
       name: 'collection',
       path: `./src/collections/${config.pluralName}.collection.ts`,
-      generate: () => generateCollection(resource),
+      generate: () => isParquet ? generateCollectionParquet(resource) : generateCollection(resource),
     },
     {
       name: 'routes',

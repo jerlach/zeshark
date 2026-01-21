@@ -121,7 +121,15 @@ export type ResourceConfig = {
   /** Primary key field (default: 'id') */
   primaryKey?: string
 
-  // TanStack DB sync mode
+  // Data source configuration
+  /**
+   * Data source type:
+   * - 'json': Traditional REST API with JSON (default) - uses TanStack DB collections
+   * - 'parquet': DuckDB WASM with parquet files - for large datasets (50k+ rows)
+   */
+  dataSource?: 'json' | 'parquet'
+
+  // TanStack DB sync mode (only applies to dataSource: 'json')
   /** How to sync data: 'eager' (load all), 'on-demand' (query-driven), 'progressive' */
   syncMode?: 'eager' | 'on-demand' | 'progressive'
 
