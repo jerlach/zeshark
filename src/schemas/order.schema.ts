@@ -95,6 +95,7 @@ export const orderResource = defineResource(
     name: 'order',
     icon: 'FileText',
     description: 'Vehicle sales orders',
+    dataSource: 'parquet',
 
     search: {
       searchableFields: ['reference', 'invoice_no', 'rfc'],

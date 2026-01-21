@@ -100,10 +100,11 @@ async function generateResource(
   // Update wiring files
   if (!options.skipWiring) {
     logSection('Updating wiring')
+    const dataSource = config.dataSource ?? 'json'
     updateSchemasBarrel(config.name, resourceVarName)
-    updateCollectionsBarrel(config.name, config.pluralName)
+    updateCollectionsBarrel(config.name, config.pluralName, dataSource)
     updateRegistry(config.name, config.pluralName, resourceVarName)
-    updateDbClient(config.name, config.pluralName)
+    updateDbClient(config.name, config.pluralName, dataSource)
     updateNavigation(
       config.name,
       config.pluralName,

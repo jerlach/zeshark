@@ -2,12 +2,13 @@
 
 import type { ResourceConfig } from '@/schemas/_resource.schema'
 import { orderResource } from '@/schemas/order.schema'
-import { ordersCollection } from '@/collections'
+// Note: Parquet collections use hooks, not TanStack DB collections
 
 // Resource registry entry type
 export type ResourceEntry = {
   config: ResourceConfig & { pluralName: string }
-  collection: unknown // Type will be inferred at runtime
+  collection?: unknown // Optional - parquet resources don't have collections
+  dataSource: 'json' | 'parquet'
   routes: {
     list: string
     new: string
@@ -20,7 +21,7 @@ export const resourceRegistry: Record<string, ResourceEntry> = {
   // === REGISTRY ENTRIES ===
   order: {
     config: orderResource.config,
-    collection: ordersCollection,
+    dataSource: 'parquet',
     routes: {
       list: '/orders',
       new: '/orders/new',

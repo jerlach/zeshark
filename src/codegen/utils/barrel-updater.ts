@@ -41,11 +41,16 @@ export function updateSchemasBarrel(
 
 export function updateCollectionsBarrel(
   resourceName: string,
-  pluralName: string
+  pluralName: string,
+  dataSource: 'json' | 'parquet' = 'json'
 ): void {
   const path = './src/collections/index.ts'
   const typeName = capitalize(resourceName)
-  const exportLine = `export { ${pluralName}Collection, type ${typeName} } from './${pluralName}.collection'`
+  
+  // Different exports for parquet vs json collections
+  const exportLine = dataSource === 'parquet'
+    ? `export { use${typeName}Query, use${typeName}WindowedQuery, build${typeName}Where, type ${typeName} } from './${pluralName}.collection'`
+    : `export { ${pluralName}Collection, type ${typeName} } from './${pluralName}.collection'`
 
   if (!existsSync(path)) {
     writeFileSync(
@@ -62,7 +67,14 @@ export function updateCollectionsBarrel(
     return
   }
 
-  const newContent = content.trimEnd() + '\n' + exportLine + '\n'
+  // For parquet, also remove any old JSON-style export for this resource
+  let newContent = content
+  if (dataSource === 'parquet') {
+    const oldJsonExport = `export { ${pluralName}Collection, type ${typeName} } from './${pluralName}.collection'`
+    newContent = newContent.replace(oldJsonExport + '\n', '')
+  }
+
+  newContent = newContent.trimEnd() + '\n' + exportLine + '\n'
   writeFileSync(path, newContent)
   console.log(`  ✓ Updated ${path}`)
 }
@@ -164,8 +176,15 @@ export function updateRegistry(
 
 export function updateDbClient(
   resourceName: string,
-  pluralName: string
+  pluralName: string,
+  dataSource: 'json' | 'parquet' = 'json'
 ): void {
+  // Parquet collections don't use TanStack DB, so skip db-client updates
+  if (dataSource === 'parquet') {
+    console.log(`  ✓ Skipping db-client (parquet collection uses DuckDB hooks)`)
+    return
+  }
+
   const path = './src/lib/db-client.ts'
 
   if (!existsSync(path)) {

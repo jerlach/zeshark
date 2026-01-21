@@ -2,14 +2,18 @@
  * DuckDB WASM Client
  *
  * Singleton that initializes DuckDB WASM once and provides query interface.
- * Supports authenticated parquet fetches via custom fetch handler.
+ * Fetches parquet files through axios to include auth headers.
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm'
+import { apiClient } from '@/api/client'
 
 // Singleton state
 let db: duckdb.AsyncDuckDB | null = null
 let initPromise: Promise<duckdb.AsyncDuckDB> | null = null
+
+// Cache for registered parquet files (URL -> filename)
+const registeredFiles = new Map<string, string>()
 
 /**
  * Get or initialize the DuckDB instance.
@@ -53,6 +57,52 @@ async function initializeDuckDB(): Promise<duckdb.AsyncDuckDB> {
 }
 
 /**
+ * Fetch a parquet file through axios (with auth headers) and register it with DuckDB.
+ * Returns the filename to use in queries.
+ */
+async function fetchAndRegisterParquet(baseUrl: string): Promise<string> {
+  const parquetUrl = `${baseUrl}?format=parquet`
+  
+  // Check if already registered
+  if (registeredFiles.has(parquetUrl)) {
+    return registeredFiles.get(parquetUrl)!
+  }
+
+  const db = await getDuckDB()
+  
+  // Fetch parquet file through axios (includes auth headers)
+  const response = await apiClient.get(parquetUrl, {
+    responseType: 'arraybuffer',
+  })
+
+  // Generate a unique filename for this URL
+  const filename = `data_${Date.now()}_${Math.random().toString(36).slice(2)}.parquet`
+  
+  // Register the buffer with DuckDB
+  await db.registerFileBuffer(filename, new Uint8Array(response.data))
+  
+  // Cache the registration
+  registeredFiles.set(parquetUrl, filename)
+  
+  return filename
+}
+
+/**
+ * Invalidate cached parquet file (forces re-fetch on next query)
+ */
+export function invalidateParquetCache(baseUrl: string): void {
+  const parquetUrl = `${baseUrl}?format=parquet`
+  registeredFiles.delete(parquetUrl)
+}
+
+/**
+ * Clear all cached parquet files
+ */
+export function clearParquetCache(): void {
+  registeredFiles.clear()
+}
+
+/**
  * Query options for parquet queries
  */
 export interface ParquetQueryOptions {
@@ -60,14 +110,11 @@ export interface ParquetQueryOptions {
   baseUrl: string
   /** SQL query - use 'data' as the table alias for the parquet source */
   sql: string
-  /** Auth token for authenticated requests */
-  authToken?: string
-  /** Additional headers */
-  headers?: Record<string, string>
 }
 
 /**
  * Execute a SQL query against a parquet file.
+ * Fetches through axios to include auth headers.
  *
  * @example
  * const result = await queryParquet({
@@ -82,14 +129,13 @@ export async function queryParquet<T = Record<string, unknown>>(
   const conn = await db.connect()
 
   try {
-    // Build parquet URL with format param
-    const parquetUrl = `${options.baseUrl}?format=parquet`
+    // Fetch and register the parquet file (with auth)
+    const filename = await fetchAndRegisterParquet(options.baseUrl)
 
     // Register the parquet file as a view called 'data'
-    // Using read_parquet with httpfs for remote files
     await conn.query(`
       CREATE OR REPLACE VIEW data AS 
-      SELECT * FROM read_parquet('${parquetUrl}')
+      SELECT * FROM read_parquet('${filename}')
     `)
 
     // Execute the user's query
@@ -111,9 +157,9 @@ export async function getParquetCount(baseUrl: string): Promise<number> {
   const conn = await db.connect()
 
   try {
-    const parquetUrl = `${baseUrl}?format=parquet`
+    const filename = await fetchAndRegisterParquet(baseUrl)
     const result = await conn.query(`
-      SELECT COUNT(*) as count FROM read_parquet('${parquetUrl}')
+      SELECT COUNT(*) as count FROM read_parquet('${filename}')
     `)
     const row = result.toArray()[0]
     return Number(row?.count ?? 0)
@@ -164,7 +210,9 @@ export async function queryParquetPaginated<T = Record<string, unknown>>(
   const conn = await db.connect()
 
   try {
-    const parquetUrl = `${options.baseUrl}?format=parquet`
+    // Fetch and register the parquet file (with auth)
+    const filename = await fetchAndRegisterParquet(options.baseUrl)
+    
     const select = options.select ?? '*'
     const whereClause = options.where ? `WHERE ${options.where}` : ''
     const orderByClause = options.orderBy ? `ORDER BY ${options.orderBy}` : ''
@@ -172,7 +220,7 @@ export async function queryParquetPaginated<T = Record<string, unknown>>(
     // Get total count (with same filters)
     const countResult = await conn.query(`
       SELECT COUNT(*) as count 
-      FROM read_parquet('${parquetUrl}')
+      FROM read_parquet('${filename}')
       ${whereClause}
     `)
     const totalCount = Number(countResult.toArray()[0]?.count ?? 0)
@@ -180,7 +228,7 @@ export async function queryParquetPaginated<T = Record<string, unknown>>(
     // Get paginated rows
     const dataResult = await conn.query(`
       SELECT ${select}
-      FROM read_parquet('${parquetUrl}')
+      FROM read_parquet('${filename}')
       ${whereClause}
       ${orderByClause}
       LIMIT ${options.limit}

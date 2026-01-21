@@ -1,18 +1,13 @@
 /**
  * DataTableVirtualDynamic
  *
- * Table component for large datasets (50k+ rows) with on-demand row fetching.
- * Only fetches and renders rows that are visible or about to be visible.
+ * High-performance table for large datasets (50k+ rows).
+ * Uses chunk-based loading + DOM virtualization.
+ * Does NOT use TanStack Table for row rendering (too slow for 50k+ rows).
  */
 
-import { useRef, useState, useEffect, useCallback } from 'react'
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  Row,
-} from '@tanstack/react-table'
+import { useRef, useState, useEffect, useCallback, memo } from 'react'
+import { ColumnDef, flexRender, AccessorFn } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   Table,
@@ -22,8 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface DataTableVirtualDynamicProps<TData, TValue> {
@@ -38,14 +32,13 @@ interface DataTableVirtualDynamicProps<TData, TValue> {
   maxHeight?: string
   /** Callback when row is clicked */
   onRowClick?: (row: TData) => void
-  /** Number of rows to fetch per batch */
-  batchSize?: number
+  /** Number of rows to fetch per chunk (default: 1000) */
+  chunkSize?: number
   /** Estimated row height in pixels */
   rowHeight?: number
+  /** Number of rows to render outside visible area (default: 5) */
+  overscan?: number
 }
-
-// Placeholder for loading rows
-const LOADING_PLACEHOLDER = Symbol('loading')
 
 export function DataTableVirtualDynamic<TData, TValue>({
   columns,
@@ -54,120 +47,124 @@ export function DataTableVirtualDynamic<TData, TValue>({
   isLoading,
   maxHeight = '600px',
   onRowClick,
-  batchSize = 50,
-  rowHeight = 48,
+  chunkSize = 1000,
+  rowHeight = 40,
+  overscan = 5,
 }: DataTableVirtualDynamicProps<TData, TValue>) {
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // Cache of loaded rows: Map<index, row>
-  const [rowCache, setRowCache] = useState<Map<number, TData>>(new Map())
-  // Set of ranges currently being fetched
-  const [loadingRanges, setLoadingRanges] = useState<Set<string>>(new Set())
-
-  // Create placeholder data array for the table
-  // This lets TanStack Table work with "virtual" rows that may not be loaded yet
-  const placeholderData = Array.from({ length: totalCount }, (_, i) => {
-    return rowCache.get(i) ?? ({ __placeholder: true, __index: i } as TData)
-  })
-
-  const table = useReactTable({
-    data: placeholderData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
-  const { rows } = table.getRowModel()
+  const rowCacheRef = useRef<Map<number, TData>>(new Map())
+  const [cacheVersion, setCacheVersion] = useState(0) // trigger re-render when cache updates
+  
+  // Track which chunks have been loaded or are loading
+  const loadedChunksRef = useRef<Set<number>>(new Set())
+  const loadingChunksRef = useRef<Set<number>>(new Set())
+  const [loadingCount, setLoadingCount] = useState(0)
 
   // Virtualizer for efficient rendering
   const rowVirtualizer = useVirtualizer({
     count: totalCount,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => rowHeight,
-    overscan: 10,
+    overscan,
   })
 
-  // Fetch missing rows when visible range changes
-  const fetchMissingRows = useCallback(
-    async (startIndex: number, endIndex: number) => {
-      // Find which rows in this range need to be fetched
-      const missingIndices: number[] = []
-      for (let i = startIndex; i <= endIndex; i++) {
-        if (!rowCache.has(i)) {
-          missingIndices.push(i)
-        }
-      }
+  const virtualItems = rowVirtualizer.getVirtualItems()
+  const firstIndex = virtualItems[0]?.index ?? 0
+  const lastIndex = virtualItems[virtualItems.length - 1]?.index ?? 0
+  const middleIndex = Math.floor((firstIndex + lastIndex) / 2)
 
-      if (missingIndices.length === 0) return
+  // Fetch a chunk of rows
+  const fetchChunk = useCallback(
+    async (chunkIndex: number) => {
+      // Skip if already loaded or loading
+      if (loadedChunksRef.current.has(chunkIndex) || loadingChunksRef.current.has(chunkIndex)) return
 
-      // Group missing indices into batches
-      const batches: { start: number; end: number }[] = []
-      let batchStart = missingIndices[0]
-      let batchEnd = missingIndices[0]
+      const start = chunkIndex * chunkSize
+      const limit = Math.min(chunkSize, totalCount - start)
+      
+      if (limit <= 0) return
 
-      for (let i = 1; i < missingIndices.length; i++) {
-        if (missingIndices[i] === batchEnd + 1 && batchEnd - batchStart < batchSize - 1) {
-          batchEnd = missingIndices[i]
-        } else {
-          batches.push({ start: batchStart, end: batchEnd })
-          batchStart = missingIndices[i]
-          batchEnd = missingIndices[i]
-        }
-      }
-      batches.push({ start: batchStart, end: batchEnd })
+      loadingChunksRef.current.add(chunkIndex)
+      setLoadingCount((c) => c + 1)
 
-      // Fetch each batch
-      for (const batch of batches) {
-        const rangeKey = `${batch.start}-${batch.end}`
+      try {
+        const fetchedRows = await fetchRows(start, limit)
 
-        // Skip if already loading this range
-        if (loadingRanges.has(rangeKey)) continue
+        // Update cache
+        fetchedRows.forEach((row, i) => {
+          rowCacheRef.current.set(start + i, row)
+        })
 
-        setLoadingRanges((prev) => new Set(prev).add(rangeKey))
-
-        try {
-          const limit = batch.end - batch.start + 1
-          const fetchedRows = await fetchRows(batch.start, limit)
-
-          // Update cache with fetched rows
-          setRowCache((prev) => {
-            const next = new Map(prev)
-            fetchedRows.forEach((row, i) => {
-              next.set(batch.start + i, row)
-            })
-            return next
-          })
-        } catch (error) {
-          console.error('Failed to fetch rows:', error)
-        } finally {
-          setLoadingRanges((prev) => {
-            const next = new Set(prev)
-            next.delete(rangeKey)
-            return next
-          })
-        }
+        loadedChunksRef.current.add(chunkIndex)
+        setCacheVersion((v) => v + 1) // trigger re-render
+      } catch (error) {
+        console.error('Failed to fetch chunk:', error)
+      } finally {
+        loadingChunksRef.current.delete(chunkIndex)
+        setLoadingCount((c) => c - 1)
       }
     },
-    [rowCache, loadingRanges, fetchRows, batchSize]
+    [fetchRows, chunkSize, totalCount]
   )
 
-  // Watch for visible range changes
+  // Prefetch chunks based on scroll position
+  const totalChunks = Math.ceil(totalCount / chunkSize)
+  
   useEffect(() => {
-    const virtualItems = rowVirtualizer.getVirtualItems()
-    if (virtualItems.length === 0) return
+    if (totalCount === 0 || totalChunks === 0) return
 
-    const startIndex = virtualItems[0].index
-    const endIndex = virtualItems[virtualItems.length - 1].index
+    // Clamp to valid chunk range
+    const currentChunk = Math.min(
+      Math.floor(middleIndex / chunkSize),
+      totalChunks - 1
+    )
 
-    // Add buffer for smoother scrolling
-    const bufferStart = Math.max(0, startIndex - batchSize)
-    const bufferEnd = Math.min(totalCount - 1, endIndex + batchSize)
+    // Always load current chunk
+    if (currentChunk >= 0 && currentChunk < totalChunks) {
+      fetchChunk(currentChunk)
+    }
 
-    fetchMissingRows(bufferStart, bufferEnd)
-  }, [rowVirtualizer.getVirtualItems(), fetchMissingRows, batchSize, totalCount])
+    // Prefetch previous chunk
+    if (currentChunk > 0) {
+      fetchChunk(currentChunk - 1)
+    }
 
-  // Check if a row is a placeholder (not yet loaded)
-  const isPlaceholderRow = (row: TData): boolean => {
-    return (row as { __placeholder?: boolean }).__placeholder === true
+    // Prefetch next chunk
+    if (currentChunk + 1 < totalChunks) {
+      fetchChunk(currentChunk + 1)
+    }
+  }, [middleIndex, chunkSize, totalCount, totalChunks, fetchChunk])
+
+  // Get cell value from row data
+  const getCellValue = (row: TData, column: ColumnDef<TData, TValue>): unknown => {
+    if ('accessorKey' in column && column.accessorKey) {
+      return (row as Record<string, unknown>)[column.accessorKey as string]
+    }
+    if ('accessorFn' in column && column.accessorFn) {
+      return (column.accessorFn as AccessorFn<TData, unknown>)(row, 0)
+    }
+    return null
+  }
+
+  // Render cell content
+  const renderCell = (row: TData, column: ColumnDef<TData, TValue>, index: number) => {
+    const value = getCellValue(row, column)
+    
+    if (column.cell && typeof column.cell === 'function') {
+      // Simple cell renderer - pass minimal context
+      return column.cell({
+        getValue: () => value,
+        row: { original: row, index } as any,
+        column: { id: ('accessorKey' in column ? column.accessorKey : column.id) as string } as any,
+        table: {} as any,
+        cell: {} as any,
+        renderValue: () => value,
+      } as any)
+    }
+    
+    return String(value ?? '')
   }
 
   if (isLoading) {
@@ -183,20 +180,14 @@ export function DataTableVirtualDynamic<TData, TValue>({
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow>
+              {columns.map((column, i) => (
+                <TableHead key={i}>
+                  {typeof column.header === 'string' ? column.header : 
+                   ('accessorKey' in column ? String(column.accessorKey) : '')}
+                </TableHead>
+              ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
@@ -210,6 +201,10 @@ export function DataTableVirtualDynamic<TData, TValue>({
     )
   }
 
+  const totalSize = rowVirtualizer.getTotalSize()
+  const topPadding = virtualItems[0]?.start ?? 0
+  const bottomPadding = totalSize - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+
   return (
     <div className="rounded-md border">
       <div
@@ -217,67 +212,50 @@ export function DataTableVirtualDynamic<TData, TValue>({
         className="overflow-auto"
         style={{ maxHeight }}
       >
-        <Table>
+        <Table style={{ height: totalSize }}>
           <TableHeader className="sticky top-0 bg-background z-10">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow>
+              {columns.map((column, i) => (
+                <TableHead key={i}>
+                  {typeof column.header === 'string' ? column.header : 
+                   ('accessorKey' in column ? String(column.accessorKey) : '')}
+                </TableHead>
+              ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
-            {/* Spacer for virtual items above visible range */}
-            {rowVirtualizer.getVirtualItems().length > 0 && (
-              <tr>
-                <td
-                  style={{
-                    height: `${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px`,
-                  }}
-                />
-              </tr>
+            {/* Top spacer */}
+            {topPadding > 0 && (
+              <tr><td style={{ height: topPadding }} /></tr>
             )}
 
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row = rows[virtualRow.index]
-              const rowData = row?.original
-              const isPlaceholder = rowData && isPlaceholderRow(rowData)
+            {virtualItems.map((virtualRow) => {
+              const rowData = rowCacheRef.current.get(virtualRow.index)
+              const isPlaceholder = !rowData
 
               return (
                 <TableRow
                   key={virtualRow.index}
                   data-index={virtualRow.index}
+                  style={{ height: rowHeight }}
                   className={cn(
-                    onRowClick && !isPlaceholder && 'cursor-pointer',
+                    onRowClick && !isPlaceholder && 'cursor-pointer hover:bg-muted/50',
                     isPlaceholder && 'animate-pulse'
                   )}
                   onClick={() => {
-                    if (rowData && !isPlaceholder && onRowClick) {
+                    if (rowData && onRowClick) {
                       onRowClick(rowData)
                     }
                   }}
                 >
                   {isPlaceholder ? (
-                    // Loading placeholder row
                     <TableCell colSpan={columns.length}>
-                      <div className="h-4 bg-muted rounded w-full" />
+                      <div className="h-4 bg-muted rounded w-3/4" />
                     </TableCell>
                   ) : (
-                    // Actual data row
-                    row?.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                    columns.map((column, colIndex) => (
+                      <TableCell key={colIndex}>
+                        {renderCell(rowData, column, virtualRow.index)}
                       </TableCell>
                     ))
                   )}
@@ -285,31 +263,23 @@ export function DataTableVirtualDynamic<TData, TValue>({
               )
             })}
 
-            {/* Spacer for virtual items below visible range */}
-            {rowVirtualizer.getVirtualItems().length > 0 && (
-              <tr>
-                <td
-                  style={{
-                    height: `${
-                      rowVirtualizer.getTotalSize() -
-                      (rowVirtualizer.getVirtualItems().at(-1)?.end ?? 0)
-                    }px`,
-                  }}
-                />
-              </tr>
+            {/* Bottom spacer */}
+            {bottomPadding > 0 && (
+              <tr><td style={{ height: bottomPadding }} /></tr>
             )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Footer with row count */}
-      <div className="border-t px-4 py-3 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {totalCount.toLocaleString()} total rows • {rowCache.size.toLocaleString()} loaded
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Scroll to load more
-        </div>
+      {/* Footer */}
+      <div className="border-t px-4 py-2 flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          {totalCount.toLocaleString()} rows • {rowCacheRef.current.size.toLocaleString()} loaded
+          {loadingCount > 0 && ' • Loading...'}
+        </span>
+        <span>
+          Chunk {Math.min(Math.floor(middleIndex / chunkSize) + 1, totalChunks)}/{totalChunks}
+        </span>
       </div>
     </div>
   )
