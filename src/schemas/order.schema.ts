@@ -146,6 +146,54 @@ export const orderResource = defineResource(
         },
       ],
     },
+
+    analytics: {
+      enabled: true,
+      kpis: [
+        { name: 'totalRevenue', sql: 'SUM(total)', label: 'Total Revenue', format: 'currency', icon: 'DollarSign' },
+        { name: 'orderCount', sql: 'COUNT(*)', label: 'Total Orders', format: 'number', icon: 'ShoppingCart' },
+        { name: 'avgOrder', sql: 'AVG(total)', label: 'Avg Order Value', format: 'currency', icon: 'TrendingUp' },
+        { name: 'pendingCount', sql: "COUNT(*) FILTER (WHERE status = 'pending')", label: 'Pending', format: 'number', icon: 'Clock' },
+      ],
+      groupedCharts: [
+        {
+          title: 'Orders by Status',
+          description: 'Distribution of order statuses',
+          groupBy: 'status',
+          metric: 'count',
+          metricSql: 'COUNT(*)',
+          type: 'pie',
+        },
+        {
+          title: 'Revenue by Type',
+          description: 'Revenue breakdown by transaction type',
+          groupBy: 'transaction_type',
+          metric: 'revenue',
+          metricSql: 'SUM(total)',
+          type: 'horizontal-bar',
+        },
+        {
+          title: 'Top Dealerships',
+          description: 'Top 5 dealerships by revenue',
+          groupBy: 'dealership',
+          metric: 'revenue',
+          metricSql: 'SUM(total)',
+          type: 'bar',
+          limit: 5,
+        },
+      ],
+      timeSeriesCharts: [
+        {
+          title: 'Orders Over Time',
+          description: 'Monthly order volume',
+          dateField: 'transaction_date',
+          metric: 'orders',
+          metricSql: 'COUNT(*)',
+          granularity: 'month',
+          type: 'line',
+        },
+      ],
+    },
   },
   {
     // IDs

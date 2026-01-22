@@ -15,6 +15,7 @@ import { generateCollectionParquet } from './templates/collection-parquet.templa
 import { generateRouteIndex } from './templates/route-index.template'
 import { generateRouteNew } from './templates/route-new.template'
 import { generateRouteEdit } from './templates/route-edit.template'
+import { generateRouteAnalytics } from './templates/route-analytics.template'
 import { generateForm } from './templates/form.template'
 import { generateColumns } from './templates/columns.template'
 
@@ -70,6 +71,15 @@ async function generateResource(
           path: `./src/routes/_app/${config.pluralName}/$${config.name}Id.tsx`,
           generate: () => generateRouteEdit(resource),
         },
+        // Analytics route (only for parquet resources with analytics enabled)
+        ...(config.dataSource === 'parquet' && config.analytics?.enabled
+          ? [
+              {
+                path: `./src/routes/_app/${config.pluralName}/analytics.tsx`,
+                generate: () => generateRouteAnalytics(resource),
+              },
+            ]
+          : []),
       ],
     },
     {

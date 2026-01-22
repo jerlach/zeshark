@@ -178,6 +178,60 @@ export type ResourceConfig = {
     /** Default page size */
     defaultPageSize?: number
   }
+
+  // Analytics dashboard configuration (only for parquet dataSource)
+  /** Analytics dashboard with KPIs and charts */
+  analytics?: {
+    /** Enable analytics route */
+    enabled?: boolean
+    /** KPI cards shown at the top */
+    kpis?: Array<{
+      /** Unique identifier */
+      name: string
+      /** Display label */
+      label: string
+      /** SQL aggregation expression, e.g., 'SUM(total)', 'COUNT(*)' */
+      sql: string
+      /** Value format */
+      format?: 'number' | 'currency' | 'percent'
+      /** Lucide icon name */
+      icon?: string
+    }>
+    /** Grouped/categorical charts */
+    groupedCharts?: Array<{
+      /** Chart title */
+      title: string
+      /** Optional description */
+      description?: string
+      /** Field to group by */
+      groupBy: string
+      /** Metric SQL expression */
+      metricSql: string
+      /** Metric name for data key */
+      metric: string
+      /** Chart type */
+      type: 'bar' | 'horizontal-bar' | 'pie' | 'donut'
+      /** Max items to show */
+      limit?: number
+    }>
+    /** Time series charts */
+    timeSeriesCharts?: Array<{
+      /** Chart title */
+      title: string
+      /** Optional description */
+      description?: string
+      /** Date field to use */
+      dateField: string
+      /** Metric SQL expression */
+      metricSql: string
+      /** Metric name */
+      metric: string
+      /** Time granularity */
+      granularity?: 'day' | 'week' | 'month' | 'year'
+      /** Chart type */
+      type: 'line' | 'area' | 'bar'
+    }>
+  }
 }
 
 // ============================================================================
