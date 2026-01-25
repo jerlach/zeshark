@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/_showcase/colors')({
+export const Route = createFileRoute('/showcase/colors')({
   component: ColorsShowcase,
 })
 

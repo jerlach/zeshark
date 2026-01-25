@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator'
 import { FormField } from '@/components/forms/_form-field'
 import { Loader2 } from 'lucide-react'
 
-export const Route = createFileRoute('/_showcase/forms')({
+export const Route = createFileRoute('/showcase/forms')({
   component: FormsShowcase,
 })
 

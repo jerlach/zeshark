@@ -9,7 +9,7 @@ import {
   Palette,
 } from 'lucide-react'
 
-export const Route = createFileRoute('/_showcase')({
+export const Route = createFileRoute('/showcase')({
   component: ShowcaseLayout,
 })
 

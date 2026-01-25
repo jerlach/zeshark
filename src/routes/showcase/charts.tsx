@@ -25,7 +25,7 @@ import {
 } from 'recharts'
 import { DollarSign, ShoppingCart, TrendingUp, Users, ArrowUp, ArrowDown } from 'lucide-react'
 
-export const Route = createFileRoute('/_showcase/charts')({
+export const Route = createFileRoute('/showcase/charts')({
   component: ChartsShowcase,
 })
 

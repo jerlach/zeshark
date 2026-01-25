@@ -39,7 +39,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Loader2, Plus, MoreHorizontal, Trash, Edit, Copy } from 'lucide-react'
 
-export const Route = createFileRoute('/_showcase/primitives')({
+export const Route = createFileRoute('/showcase/primitives')({
   component: PrimitivesShowcase,
 })
 

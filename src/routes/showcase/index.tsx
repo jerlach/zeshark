@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Component, FormInput, Table2, BarChart3, Palette } from 'lucide-react'
 
-export const Route = createFileRoute('/_showcase/')({
+export const Route = createFileRoute('/showcase/')({
   component: ShowcaseOverview,
 })
 

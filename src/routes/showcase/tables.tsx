@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
 
-export const Route = createFileRoute('/_showcase/tables')({
+export const Route = createFileRoute('/showcase/tables')({
   component: TablesShowcase,
 })
 
