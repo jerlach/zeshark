@@ -20,6 +20,7 @@ COMPONENTS=(
   "dropdown-menu"
   "table"
   "separator"
+  "badge"
 )
 
 # Install each component
