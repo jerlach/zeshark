@@ -1,218 +1,178 @@
 # 🦈 Zeshark
 
-A schema-first, codegen-powered template for building data-driven SPAs with TanStack libraries.
+**Schema-first, codegen-powered framework for building data-driven SPAs with the TanStack ecosystem.**
 
-## Stack
+Define your data schema once, generate everything else: routes, forms, tables, collections, and navigation. Supports both traditional REST APIs and high-performance parquet files for large datasets.
 
-| Library | Purpose |
-|---------|---------|
-| **TanStack Router** | Type-safe routing with file-based routes |
-| **TanStack DB** | Client-side normalized state with live queries |
-| **TanStack Query** | Server state management |
-| **TanStack Form** | Type-safe forms |
-| **TanStack Table** | Headless table logic |
-| **Zustand** | UI state |
-| **Zod** | Schema validation |
-| **shadcn/ui** | UI components |
+## ✨ Features
 
-## Quick Start
+- **Schema-First Development** - Define schemas with Zod, generate UI automatically
+- **Dual Data Sources** - REST/JSON for typical CRUD, DuckDB + Parquet for 50k+ row datasets
+- **Full TanStack Integration** - Router, Query, Table, Form, and DB working together
+- **Built-in Analytics** - KPI dashboards and charts for parquet resources
+- **Command Palette** - Global search across all resources (⌘K)
+- **Type-Safe Everything** - End-to-end TypeScript from schema to component
+
+## 📚 Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** - Getting started, workflows, and examples
+- **[Architecture](docs/ARCHITECTURE.md)** - How the pieces fit together
+- **[Schemas](docs/SCHEMAS.md)** - Defining resources with field metadata
+- **[Code Generation](docs/CODEGEN.md)** - How codegen works and customization
+- **[API Integration](docs/API_INTEGRATION.md)** - Connecting backends and auth
+
+## 🚀 Quick Start
 
 ```bash
-# 1. Install dependencies
+# 1. Clone and install
+git clone <your-repo>
+cd zeshark
 pnpm install
 
-# 2. Install UI components
+# 2. Setup UI components
 pnpm setup-ui
 
-# 3. Start dev server
+# 3. Configure API (copy and edit .env)
+cp .env.example .env
+
+# 4. Start development
 pnpm dev
 ```
 
-## Creating a Resource
+## 🏗️ Creating a Resource (5 minutes)
 
-### 1. Define the Schema
-
-Create a schema file in `src/schemas/`:
+### Step 1: Define Schema
 
 ```typescript
-// src/schemas/customer.schema.ts
+// src/schemas/product.schema.ts
 import { z } from 'zod'
 import { defineResource } from './_resource.schema'
 
-export const customerResource = defineResource(
+export const productResource = defineResource(
   {
-    name: 'customer',
-    icon: 'Users',
-    description: 'Manage customer accounts',
-    syncMode: 'eager',
-    
-    search: {
-      enabled: true,
-      searchableFields: ['name', 'email'],
-      resultLabelField: 'name',
-      resultDescriptionField: 'email',
-    },
+    name: 'product',
+    icon: 'Package',
+    description: 'Product catalog',
+    dataSource: 'json', // or 'parquet' for large datasets
     
     table: {
-      columns: ['name', 'email', 'status'],
+      columns: ['name', 'price', 'status'],
       defaultSort: { field: 'name', order: 'asc' },
-      searchableFields: ['name', 'email'],
+    },
+    
+    search: {
+      searchableFields: ['name', 'sku'],
+      resultLabelField: 'name',
     },
   },
   {
-    name: z.string().min(1).meta({ 
-      label: 'Name',
-      sortable: true,
-    }),
-    email: z.string().email().meta({ 
-      label: 'Email',
-      inputType: 'email',
-    }),
-    status: z.enum(['active', 'inactive']).default('active').meta({
-      label: 'Status',
-      inputType: 'select',
+    name: z.string().min(1).meta({ label: 'Product Name', sortable: true }),
+    sku: z.string().meta({ label: 'SKU' }),
+    price: z.number().meta({ label: 'Price', inputType: 'currency' }),
+    status: z.enum(['active', 'draft', 'archived']).meta({ 
+      label: 'Status', 
+      inputType: 'select' 
     }),
   }
 )
-
-export type Customer = typeof customerResource.type
 ```
 
-### 2. Generate Code
+### Step 2: Generate
 
 ```bash
-pnpm generate customer
+pnpm generate product
 ```
 
-This generates:
-- `src/collections/customers.collection.ts` - TanStack DB collection
-- `src/routes/_app/customers/index.tsx` - List page
-- `src/routes/_app/customers/new.tsx` - Create page
-- `src/routes/_app/customers/$customerId.tsx` - Edit page
-- `src/components/forms/customer-form.tsx` - Form component
-- `src/components/tables/customer-columns.tsx` - Table columns
+This creates:
+- **Collection** - `src/collections/products.collection.ts`
+- **Routes** - List, Create, Edit pages in `src/routes/_app/products/`
+- **Form** - `src/components/forms/product-form.tsx`
+- **Table Columns** - `src/components/tables/product-columns.tsx`
 
-And updates:
-- `src/schemas/index.ts` - Schema export
-- `src/collections/index.ts` - Collection export
-- `src/lib/registry.ts` - Resource registry
-- `src/lib/db-client.ts` - DB client
-- `src/lib/navigation.ts` - Navigation
+And wires everything into navigation, registry, and DB client.
 
-### 3. Connect Your API
+### Step 3: Done!
 
-Update `src/api/client.ts` with your API base URL:
+Your resource is now available at `/products` with full CRUD, search, and filtering.
 
-```typescript
-export const apiClient = axios.create({
-  baseURL: 'https://your-api.com',
-})
+## 📁 Project Structure
+
+```
+src/
+├── schemas/           # 🎯 SOURCE OF TRUTH - Your resource definitions
+│   ├── _resource.schema.ts    # Base schema helper
+│   └── *.schema.ts            # Resource schemas
+├── collections/       # 🔄 GENERATED - TanStack DB collections
+├── routes/            # 🔄 GENERATED - File-based routing
+│   ├── __root.tsx             # Root layout (providers)
+│   ├── _app.tsx               # App shell (sidebar, nav)
+│   └── _app/*/                # Resource routes
+├── components/
+│   ├── ui/            # shadcn components
+│   ├── forms/         # 🔄 GENERATED - Resource forms
+│   ├── tables/        # 🔄 GENERATED - Table column defs
+│   └── shared/        # Reusable components
+├── lib/               # 🔄 AUTO-UPDATED - Core utilities
+├── hooks/             # Custom React hooks
+├── stores/            # Zustand UI state
+├── api/               # API client (axios)
+└── codegen/           # Code generation system
 ```
 
-## CLI Commands
+## 🛠️ CLI Commands
 
 ```bash
-# Generate a resource
+# Generate a resource from schema
 pnpm generate <resource-name>
-
-# Generate with force overwrite
-pnpm generate <resource-name> --force
-
-# Generate specific parts only
-pnpm generate <resource-name> --only=collection
-pnpm generate <resource-name> --only=routes
-pnpm generate <resource-name> --only=form
-pnpm generate <resource-name> --only=columns
+pnpm generate <resource-name> --force     # Overwrite existing
+pnpm generate <resource-name> --only=form # Generate only form
 
 # Generate all resources
 pnpm generate:all
 
-# Add shadcn component
-pnpm dlx shadcn@latest add <component-name>
+# Development
+pnpm dev              # Start dev server
+pnpm build            # Production build
+pnpm preview          # Preview production build
+
+# UI Components
+pnpm setup-ui                          # Initial UI setup
+pnpm dlx shadcn@latest add <component> # Add more components
 ```
 
-## Field Metadata
+## 🔧 Tech Stack
 
-Use `.meta()` to configure field behavior:
+| Library | Purpose |
+|---------|----------|
+| **TanStack Router** | Type-safe file-based routing |
+| **TanStack DB** | Client-side normalized state (JSON sources) |
+| **TanStack Query** | Server state and caching |
+| **TanStack Form** | Type-safe form handling |
+| **TanStack Table** | Headless table logic |
+| **DuckDB WASM** | In-browser SQL for parquet files |
+| **Zod** | Schema validation + metadata |
+| **Zustand** | UI state management |
+| **shadcn/ui** | Component library |
+| **Tailwind CSS 4** | Styling |
 
-```typescript
-z.string().meta({
-  label: 'Display Name',
-  placeholder: 'Enter name...',
-  description: 'Help text',
-  
-  // Display
-  hidden: false,
-  readOnly: false,
-  
-  // Table
-  sortable: true,
-  filterable: true,
-  columnWidth: 200,
-  
-  // Form input type
-  inputType: 'text' | 'number' | 'email' | 'textarea' | 
-             'select' | 'combobox' | 'date' | 'currency',
-  
-  // Relation (foreign key)
-  relation: {
-    resource: 'customer',
-    labelField: 'name',
-    searchFields: ['name', 'email'],
-  },
-})
-```
-
-## Project Structure
-
-```
-src/
-├── schemas/           # 🎯 SOURCE OF TRUTH
-│   ├── _resource.schema.ts
-│   └── *.schema.ts
-├── collections/       # 🔄 GENERATED
-│   └── *.collection.ts
-├── routes/            # 🔄 GENERATED
-│   ├── __root.tsx
-│   ├── _app.tsx
-│   └── _app/*/
-├── components/
-│   ├── ui/            # shadcn components
-│   ├── forms/         # 🔄 GENERATED
-│   ├── tables/        # 🔄 GENERATED
-│   └── shared/
-├── lib/               # 🔄 AUTO-UPDATED
-│   ├── registry.ts
-│   ├── db-client.ts
-│   └── navigation.ts
-├── stores/            # Zustand stores
-├── api/               # API client
-└── codegen/           # Code generation
-```
-
-## Architecture
-
-### State Management
-
-| State Type | Solution |
-|------------|----------|
-| Entity/Domain Data | TanStack DB (collections + live queries) |
-| URL State | TanStack Router (search params) |
-| UI State | Zustand (sidebar, modals) |
-
-### Data Flow
-
-1. **Schema** defines validation and metadata
-2. **Codegen** generates collection, routes, forms, tables
-3. **Collection** loads data from API into TanStack DB
-4. **Live Query** reactively queries collection
-5. **Components** render data and handle mutations
-
-## Environment Variables
+## ⚙️ Environment Variables
 
 ```env
-VITE_API_URL=http://localhost:3000
+# Required
+VITE_API_URL=https://api.example.com
+
+# Optional - for development auth bypass
+VITE_API_TOKEN=your-dev-token
 ```
+
+## 📖 Learn More
+
+See the [User Guide](docs/USER_GUIDE.md) for comprehensive documentation on:
+- Defining complex schemas with relations
+- Using parquet data sources for analytics
+- Customizing generated code
+- Authentication patterns
+- Deployment
 
 ## License
 
