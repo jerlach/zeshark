@@ -10,9 +10,16 @@ export const transactionTypeEnum = z.enum(['retail', 'pre_owned', 'exchange'])
 export const subOrderTypeEnum = z.enum(['fleet', 'bank', 'employee', 'total_loss', 'out_right', 'exchange'])
 export const pldTypeEnum = z.enum(['archive', 'alert'])
 export const pldStatusEnum = z.enum(['pending', 'sent', 'cancelled'])
-export const customerTypeEnum = z.enum(['individual', 'business']) // adjust variants as needed
-export const uploadStatusEnum = z.enum(['pending', 'uploaded', 'rejected']) // adjust as needed
-export const documentOwnerTypeEnum = z.enum(['customer', 'vehicle', 'order']) // adjust as needed
+export const customerTypeEnum = z.enum(['individual', 'business'])
+export const uploadStatusEnum = z.enum(['pending', 'uploaded', 'rejected'])
+export const documentOwnerTypeEnum = z.enum(['customer', 'vehicle', 'order'])
+
+// Export enum options arrays for faceted filters
+export const statusOptions = orderStatusEnum.options
+export const transaction_typeOptions = transactionTypeEnum.options
+export const pld_statusOptions = pldStatusEnum.options
+export const pld_typeOptions = pldTypeEnum.options
+export const sub_order_typeOptions = subOrderTypeEnum.options
 
 // ============================================================================
 // EMBEDDED SCHEMAS
