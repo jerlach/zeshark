@@ -81,7 +81,7 @@ function generateColumnDef(field: ParsedField, resourceName: string, filterableF
   // Filter function for faceted filtering
   const filterFn = isFilterable ? `
     filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
+      return value.includes(row.original[id as keyof typeof row.original])
     },` : ''
 
   // Relation column
@@ -105,7 +105,7 @@ function generateColumnDef(field: ParsedField, resourceName: string, filterableF
     accessorKey: '${name}',
     header: '${header}',${filterFn}
     cell: ({ row }) => {
-      const value = row.getValue('${name}') as string
+      const value = row.original.${name} as string
       return (
         <Badge variant="outline" className="capitalize">
           {value?.replace(/_/g, ' ') ?? '-'}
@@ -121,7 +121,7 @@ function generateColumnDef(field: ParsedField, resourceName: string, filterableF
     accessorKey: '${name}',
     header: '${header}',${filterFn}
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue('${name}') ?? '0')
+      const amount = parseFloat(String(row.original.${name} ?? '0'))
       const formatted = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -137,7 +137,7 @@ function generateColumnDef(field: ParsedField, resourceName: string, filterableF
     accessorKey: '${name}',
     header: '${header}',${filterFn}
     cell: ({ row }) => {
-      const val = row.getValue('${name}') as string
+      const val = row.original.${name} as string
       if (!val) return <div>-</div>
       const date = new Date(val)
       return <div>{date.toLocaleDateString()}</div>
