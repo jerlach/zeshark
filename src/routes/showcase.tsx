@@ -1,80 +1,143 @@
-import { Outlet, createFileRoute, Link } from '@tanstack/react-router'
-import { cn } from '@/lib/utils'
+import { Outlet, createFileRoute, Link, useRouterState } from '@tanstack/react-router'
 import {
-  LayoutGrid,
-  FormInput,
-  Table2,
-  BarChart3,
-  Component,
-  Palette,
-} from 'lucide-react'
+  IconLayoutGrid,
+  IconForms,
+  IconTable,
+  IconChartBar,
+  IconPalette,
+  IconArrowLeft,
+} from '@tabler/icons-react'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
 
 export const Route = createFileRoute('/showcase')({
   component: ShowcaseLayout,
 })
 
 const showcaseNav = [
-  { title: 'Overview', href: '/showcase', icon: LayoutGrid },
-  { title: 'Primitives', href: '/showcase/primitives', icon: Component },
-  { title: 'Forms', href: '/showcase/forms', icon: FormInput },
-  { title: 'Tables', href: '/showcase/tables', icon: Table2 },
-  { title: 'Charts', href: '/showcase/charts', icon: BarChart3 },
-  { title: 'Colors', href: '/showcase/colors', icon: Palette },
+  { title: 'Overview', href: '/showcase', icon: IconLayoutGrid },
+  { title: 'Tables', href: '/showcase/tables', icon: IconTable },
+  { title: 'Forms', href: '/showcase/forms', icon: IconForms },
+  { title: 'Charts', href: '/showcase/charts', icon: IconChartBar },
+  { title: 'Colors', href: '/showcase/colors', icon: IconPalette },
 ]
+
+function ShowcaseSidebar() {
+  const router = useRouterState()
+  const currentPath = router.location.pathname
+
+  return (
+    <Sidebar collapsible="offcanvas">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild size="lg">
+              <Link to="/showcase">
+                <span className="text-xl">🎨</span>
+                <div className="flex flex-col">
+                  <span className="text-base font-semibold">Showcase</span>
+                  <span className="text-xs text-muted-foreground">Component Library</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Components</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {showcaseNav.map((item) => {
+                const isActive = currentPath === item.href
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link to={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Back to App">
+              <Link to="/">
+                <IconArrowLeft />
+                <span>Back to App</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
+
+function ShowcaseHeader() {
+  const router = useRouterState()
+  const currentPath = router.location.pathname
+  
+  const getPageTitle = () => {
+    const item = showcaseNav.find(n => n.href === currentPath)
+    return item?.title || 'Showcase'
+  }
+
+  return (
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b">
+      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+        <h1 className="text-base font-medium">{getPageTitle()}</h1>
+      </div>
+    </header>
+  )
+}
 
 function ShowcaseLayout() {
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-card">
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-4 border-b">
-            <Link to="/" className="text-xl font-bold">
-              🦈 Zeshark
-            </Link>
-            <p className="text-xs text-muted-foreground mt-1">Component Showcase</p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4">
-            <ul className="space-y-1">
-              {showcaseNav.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      '[&.active]:bg-accent [&.active]:text-accent-foreground'
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Footer */}
-          <div className="p-4 border-t">
-            <Link
-              to="/"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              ← Back to App
-            </Link>
+    <SidebarProvider
+      style={
+        {
+          '--sidebar-width': 'calc(var(--spacing) * 64)',
+          '--header-height': 'calc(var(--spacing) * 12)',
+        } as React.CSSProperties
+      }
+    >
+      <ShowcaseSidebar />
+      <SidebarInset>
+        <ShowcaseHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="px-4 lg:px-6">
+                <Outlet />
+              </div>
+            </div>
           </div>
         </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="container py-8 max-w-5xl">
-          <Outlet />
-        </div>
-      </main>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

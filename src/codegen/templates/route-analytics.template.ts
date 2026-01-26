@@ -4,20 +4,20 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-// Map icon names to lucide imports
+// Map icon names to tabler icons
 const ICON_MAP: Record<string, string> = {
-  DollarSign: 'DollarSign',
-  ShoppingCart: 'ShoppingCart',
-  TrendingUp: 'TrendingUp',
-  Clock: 'Clock',
-  Users: 'Users',
-  Package: 'Package',
-  FileText: 'FileText',
-  Activity: 'Activity',
-  BarChart: 'BarChart3',
-  PieChart: 'PieChartIcon',
-  Hash: 'Hash',
-  Percent: 'Percent',
+  DollarSign: 'IconCurrencyDollar',
+  ShoppingCart: 'IconShoppingCart',
+  TrendingUp: 'IconTrendingUp',
+  Clock: 'IconClock',
+  Users: 'IconUsers',
+  Package: 'IconPackage',
+  FileText: 'IconFileText',
+  Activity: 'IconActivity',
+  BarChart: 'IconChartBar',
+  PieChart: 'IconChartPie',
+  Hash: 'IconHash',
+  Percent: 'IconPercentage',
 }
 
 export function generateRouteAnalytics(resource: ParsedResource): string | null {
@@ -37,7 +37,7 @@ export function generateRouteAnalytics(resource: ParsedResource): string | null 
   const timeSeriesCharts = analytics.timeSeriesCharts ?? []
 
   // Collect unique icons needed
-  const iconSet = new Set<string>(['ArrowLeft'])
+  const iconSet = new Set<string>(['IconArrowLeft'])
   for (const kpi of kpis) {
     if (kpi.icon && ICON_MAP[kpi.icon]) {
       iconSet.add(ICON_MAP[kpi.icon])
@@ -59,7 +59,7 @@ export function generateRouteAnalytics(resource: ParsedResource): string | null 
   // Generate KPI cards
   const kpiCards = kpis
     .map((k, i) => {
-      const iconComponent = k.icon && ICON_MAP[k.icon] ? ICON_MAP[k.icon] : 'Activity'
+      const iconComponent = k.icon && ICON_MAP[k.icon] ? ICON_MAP[k.icon] : 'IconActivity'
       const formatFn = k.format === 'currency' ? 'formatCurrency' : 'formatNumber'
       return `
         <Card>
@@ -181,73 +181,112 @@ export function generateRouteAnalytics(resource: ParsedResource): string | null 
     })
     .join('\n')
 
-  // Generate time series chart components
+  // Generate time series chart components with interactive controls
   const timeSeriesChartComponents = timeSeriesCharts
     .map((c, i) => {
       const varName = `timeSeries${i}Data`
       const loadingVar = `timeSeries${i}Loading`
-      const chartConfig = `{ value: { label: '${c.metric}', color: COLORS[${i % 5}] } }`
+      const stateVar = `timeRange${i}`
+      const chartConfig = `{ value: { label: '${c.metric}', color: 'var(--primary)' } }`
 
       let chartJsx = ''
       if (c.type === 'area') {
         chartJsx = `
-              <ChartContainer config={${chartConfig}} className="h-[300px]">
-                <AreaChart data={${varName} ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <ChartContainer config={${chartConfig}} className="aspect-auto h-[250px] w-full">
+                <AreaChart data={filtered${i}Data}>
+                  <defs>
+                    <linearGradient id="fillValue${i}" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} />
                   <XAxis
                     dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
                     tickFormatter={(v) => {
                       const date = new Date(v)
-                      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     }}
                   />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        indicator="dot"
+                      />
+                    }
+                  />
                   <Area
-                    type="monotone"
+                    type="natural"
                     dataKey="value"
-                    stroke={COLORS[${i % 5}]}
-                    fill={COLORS[${i % 5}]}
-                    fillOpacity={0.3}
+                    fill="url(#fillValue${i})"
+                    stroke="var(--primary)"
                   />
                 </AreaChart>
               </ChartContainer>`
       } else if (c.type === 'bar') {
         chartJsx = `
-              <ChartContainer config={${chartConfig}} className="h-[300px]">
-                <BarChart data={${varName} ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <ChartContainer config={${chartConfig}} className="aspect-auto h-[250px] w-full">
+                <BarChart data={filtered${i}Data}>
+                  <CartesianGrid vertical={false} />
                   <XAxis
                     dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
                     tickFormatter={(v) => {
                       const date = new Date(v)
-                      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     }}
                   />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" fill={COLORS[${i % 5}]} radius={4} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        indicator="dot"
+                      />
+                    }
+                  />
+                  <Bar dataKey="value" fill="var(--primary)" radius={4} />
                 </BarChart>
               </ChartContainer>`
       } else {
         // line chart default
         chartJsx = `
-              <ChartContainer config={${chartConfig}} className="h-[300px]">
-                <LineChart data={${varName} ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <ChartContainer config={${chartConfig}} className="aspect-auto h-[250px] w-full">
+                <LineChart data={filtered${i}Data}>
+                  <CartesianGrid vertical={false} />
                   <XAxis
                     dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
                     tickFormatter={(v) => {
                       const date = new Date(v)
-                      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     }}
                   />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        indicator="dot"
+                      />
+                    }
+                  />
                   <Line
-                    type="monotone"
+                    type="natural"
                     dataKey="value"
-                    stroke={COLORS[${i % 5}]}
+                    stroke="var(--primary)"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -256,14 +295,37 @@ export function generateRouteAnalytics(resource: ParsedResource): string | null 
       }
 
       return `
-        <Card>
+        <Card className="@container/card">
           <CardHeader>
             <CardTitle>${c.title}</CardTitle>
-            ${c.description ? `<CardDescription>${c.description}</CardDescription>` : ''}
+            ${c.description ? `<CardDescription className="hidden @[540px]/card:block">${c.description}</CardDescription>` : ''}
+            <CardAction>
+              <ToggleGroup
+                type="single"
+                value={${stateVar}}
+                onValueChange={set${capitalize(stateVar)}}
+                variant="outline"
+                className="hidden *:data-[slot=toggle-group-item]:!px-4 @[600px]/card:flex"
+              >
+                <ToggleGroupItem value="90d">3 months</ToggleGroupItem>
+                <ToggleGroupItem value="30d">30 days</ToggleGroupItem>
+                <ToggleGroupItem value="7d">7 days</ToggleGroupItem>
+              </ToggleGroup>
+              <Select value={${stateVar}} onValueChange={set${capitalize(stateVar)}}>
+                <SelectTrigger className="w-36 @[600px]/card:hidden" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="90d">Last 3 months</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardAction>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
             {${loadingVar} ? (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                 Loading...
               </div>
             ) : (${chartJsx}
@@ -306,16 +368,34 @@ export function generateRouteAnalytics(resource: ParsedResource): string | null 
 
   const rechartsImportList = Array.from(rechartsImports).join(',\n  ')
 
-  // Arrange charts in 2-column grid
-  const allCharts = [...groupedChartComponents.split('</Card>').filter(Boolean).map(c => c + '</Card>')]
-  const timeCharts = [...timeSeriesChartComponents.split('</Card>').filter(Boolean).map(c => c + '</Card>')]
+  // Generate time range state variables for each time series chart
+  const timeRangeStates = timeSeriesCharts
+    .map((_, i) => `const [timeRange${i}, setTimeRange${i}] = useState('90d')`)
+    .join('\n  ')
+
+  // Generate filtered data for each time series chart
+  const filteredDataFns = timeSeriesCharts
+    .map((_, i) => `
+  const filtered${i}Data = useMemo(() => {
+    if (!timeSeries${i}Data) return []
+    const now = new Date()
+    let daysToSubtract = 90
+    if (timeRange${i} === '30d') daysToSubtract = 30
+    else if (timeRange${i} === '7d') daysToSubtract = 7
+    const startDate = new Date(now)
+    startDate.setDate(startDate.getDate() - daysToSubtract)
+    return timeSeries${i}Data.filter((item: { date: string }) => new Date(item.date) >= startDate)
+  }, [timeSeries${i}Data, timeRange${i}])`)
+    .join('\n')
 
   return `// 🔄 GENERATED by codegen - Analytics Dashboard
 
+import { useState, useMemo } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   ${rechartsImportList},
 } from 'recharts'
+import { ${iconImports} } from '@tabler/icons-react'
 import {
   ChartContainer,
   ChartTooltip,
@@ -323,13 +403,24 @@ import {
 } from '@/components/ui/chart'
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ${iconImports} } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from '@/components/ui/toggle-group'
 import {
   useKPIMetrics,
   useGroupedAnalytics,
@@ -344,14 +435,17 @@ const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const API_URL = \`\${API_BASE}/${pluralName}\`
 
 const COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ]
 
 function ${displayName}AnalyticsPage() {
+  // Time range states for interactive charts
+  ${timeRangeStates}
+
   // KPI Metrics
   const { data: kpis, isLoading: kpisLoading } = useKPIMetrics({
     baseUrl: API_URL,
@@ -361,6 +455,7 @@ function ${displayName}AnalyticsPage() {
   })
 ${groupedHooks}
 ${timeSeriesHooks}
+${filteredDataFns}
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -378,19 +473,17 @@ ${timeSeriesHooks}
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/${pluralName}">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">${displayName} Analytics</h1>
-            <p className="text-muted-foreground">
-              Real-time insights powered by DuckDB
-            </p>
-          </div>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/${pluralName}">
+            <IconArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">${displayName} Analytics</h1>
+          <p className="text-muted-foreground text-sm">
+            Real-time insights powered by DuckDB
+          </p>
         </div>
       </div>
 
@@ -400,8 +493,12 @@ ${timeSeriesHooks}
       </div>
 
       {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         ${groupedChartComponents}
+      </div>
+
+      {/* Time Series Charts - Full Width */}
+      <div className="flex flex-col gap-4">
         ${timeSeriesChartComponents}
       </div>
     </div>

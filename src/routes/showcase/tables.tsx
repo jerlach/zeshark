@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ColumnDef } from '@tanstack/react-table'
-import { DataTable } from '@/components/shared/data-table'
+import { IconDotsVertical, IconArrowsSort } from '@tabler/icons-react'
+import { DataTableEnhanced } from '@/components/shared/data-table-enhanced'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 export const Route = createFileRoute('/showcase/tables')({
   component: TablesShowcase,
@@ -54,25 +55,25 @@ const mockProducts: Product[] = [
   { id: '6', name: 'Discontinued', category: 'Legacy', price: 199.99, stock: 5, status: 'archived' },
 ]
 
-// Status badge component
+// Status badge using the Badge component
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    fulfilled: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-    archived: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    pending: 'secondary',
+    fulfilled: 'default',
+    cancelled: 'destructive',
+    active: 'default',
+    draft: 'outline',
+    archived: 'secondary',
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles[status] ?? styles.draft}`}>
+    <Badge variant={variants[status] ?? 'outline'}>
       {status}
-    </span>
+    </Badge>
   )
 }
 
-// Order columns
+// Order columns - matching codegen output pattern
 const orderColumns: ColumnDef<Order>[] = [
   {
     accessorKey: 'reference',
@@ -90,7 +91,7 @@ const orderColumns: ColumnDef<Order>[] = [
         className="-ml-4"
       >
         Customer
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+        <IconArrowsSort className="ml-2 h-4 w-4" />
       </Button>
     ),
   },
@@ -124,8 +125,8 @@ const orderColumns: ColumnDef<Order>[] = [
     cell: () => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <MoreHorizontal className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <IconDotsVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -184,8 +185,8 @@ const productColumns: ColumnDef<Product>[] = [
     cell: () => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <MoreHorizontal className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <IconDotsVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -198,61 +199,67 @@ const productColumns: ColumnDef<Product>[] = [
   },
 ]
 
-function Section({ title, description, children }: { 
-  title: string
-  description?: string
-  children: React.ReactNode 
-}) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold">{title}</h2>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
-        )}
-      </div>
-      <div className="border rounded-lg">{children}</div>
-    </div>
-  )
-}
-
 function TablesShowcase() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Tables</h1>
-        <p className="text-muted-foreground mt-2">
-          Data tables with sorting, filtering, and actions
+        <h1 className="text-2xl font-semibold tracking-tight">Tables</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Data tables with pagination, column visibility, and actions - matching codegen output
         </p>
       </div>
 
-      <Section 
-        title="Orders Table" 
-        description="With status badges, currency formatting, and row actions"
-      >
-        <DataTable columns={orderColumns} data={mockOrders} />
-      </Section>
+      {/* Orders Table */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-medium">Orders Table</h2>
+          <p className="text-sm text-muted-foreground">With status badges, currency formatting, and row actions</p>
+        </div>
+        <DataTableEnhanced 
+          columns={orderColumns} 
+          data={mockOrders}
+          onRowClick={(row) => console.log('Clicked:', row)}
+        />
+      </div>
 
-      <Section 
-        title="Products Table" 
-        description="With composite cells and stock indicators"
-      >
-        <DataTable columns={productColumns} data={mockProducts} />
-      </Section>
+      {/* Products Table */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-medium">Products Table</h2>
+          <p className="text-sm text-muted-foreground">With composite cells and stock indicators</p>
+        </div>
+        <DataTableEnhanced 
+          columns={productColumns} 
+          data={mockProducts}
+        />
+      </div>
 
-      <Section 
-        title="Empty State"
-        description="How the table looks with no data"
-      >
-        <DataTable columns={orderColumns} data={[]} />
-      </Section>
+      {/* Empty State */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-medium">Empty State</h2>
+          <p className="text-sm text-muted-foreground">How the table looks with no data</p>
+        </div>
+        <DataTableEnhanced 
+          columns={orderColumns} 
+          data={[]} 
+          showColumnVisibility={false}
+        />
+      </div>
 
-      <Section 
-        title="Loading State"
-        description="Spinner shown while data is loading"
-      >
-        <DataTable columns={orderColumns} data={[]} isLoading />
-      </Section>
+      {/* Loading State */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-medium">Loading State</h2>
+          <p className="text-sm text-muted-foreground">Spinner shown while data is loading</p>
+        </div>
+        <DataTableEnhanced 
+          columns={orderColumns} 
+          data={[]} 
+          isLoading 
+          showColumnVisibility={false}
+        />
+      </div>
     </div>
   )
 }
